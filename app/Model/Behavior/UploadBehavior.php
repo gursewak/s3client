@@ -1,5 +1,4 @@
 <?php
-//App::import('vendor','wideimage/lib/WideImage');
 class UploadBehavior extends ModelBehavior {
     /**
      * Variable to hold the files to be upload to S3
@@ -38,7 +37,7 @@ class UploadBehavior extends ModelBehavior {
                     's3_secret_key'      => Configure::read('awsSecretKey'),
                     'formfield'          => '',
                     's3_path'            => '',
-                    'allowed_ext'        => array('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico'),
+                    'allowed_ext'        => array('jpg', 'jpeg', 'png', 'gif', 'bmp', 'ico'),
                     's3_request_headers' => array(
                                              'Expires'       => 'Fri, 30 Oct 2030 14:19:41 GMT', //Far future date
                                              'Cache-control' => 'public',
@@ -56,15 +55,18 @@ class UploadBehavior extends ModelBehavior {
 					'300x180' => array(
 						// Place any custom thumbsize in model config instead,
 					),
-					'thumbsizes' => array(
+					'thumbnailimage' => array(
 						// Place any custom thumbsize in model config instead,
 					)
-                   );
-
-        foreach ($settings as $field => $options) {
-			$settings = $this->_arrayMerge($default, $options);
-			$this->settings[$Model->alias][$field] = $settings;
-        }
+       );
+		if(!empty($settings)){
+			foreach ($settings as $field => $options) {
+				$settings = $this->_arrayMerge($default, $options);
+				$this->settings[$Model->alias][$field] = $settings;
+			}
+		}else{
+			$this->settings[$Model->alias]['filename'] = $default;
+		}
     }//end setup()
     
     /**
@@ -217,21 +219,70 @@ class UploadBehavior extends ModelBehavior {
             }
             // Instantiate the class
             $aws = new S3($accessKey, $secretKey);
+			//$Model->useTable
+			//$Model->table			
+			$setModelTableName =  $this->getModelTableName($Model);
+			$setUploadFolderInfo =  $this->getUploadFolderInfo($Model);
+			
             // If there is an old file to be removed
             if (!empty($file['old_filename'])) {
-                $aws->deleteObject($this->settings[$Model->name][$field]['s3_bucket'], $file['old_filename']);
+                //$aws->deleteObject($this->settings[$Model->name][$field]['s3_bucket'], $setModelTableName.'/'.$file['old_filename']);
+					if(!empty($setUploadFolderInfo)){
+						foreach($setUploadFolderInfo as $key=>$val){
+							foreach($val as $key1=>$val1){
+								$aws->deleteObject($this->settings[$Model->name][$field]['s3_bucket'], $setModelTableName.'/'.$key1.'/'.$file['old_filename']);
+							}
+						}
+					}
             }
+			
+			//Code For Image Resize
+			$dir = 'tmpImage';
+			
+			// create new directory with 777 permissions if it does not exist yet
+			// owner will be the user/group the PHP script is run under
+			if ( !file_exists($dir) ) {
+				mkdir ($dir, 0777);
+				chmod($dir, 0777);
+			}
+			chmod($dir, 0777);
+			
+			App::import('Vendor','wide-image', array('file' => 'wideimage/lib/WideImage.php'));
+				if(!empty($setUploadFolderInfo)){
+					foreach($setUploadFolderInfo as $key=>$val){
+						foreach($val as $key1=>$val1){
+							if($key1!='original'){
+								if(!empty($val1) && !empty($val1['width']) && !empty($val1['height'])){
+									$width = $this->settings[$Model->name][$field][$key1]['width'];
+									$height = $this->settings[$Model->name][$field][$key1]['height'];
+									WideImage::load($file['tmp_name'])->resize($width, $height)->saveToFile('tmpImage/'.$file['name']);
+											
+										$isUploaded = $aws->putObjectFile(
+											  WWW_ROOT.'tmpImage/'.$file['name'],
+											   $this->settings[$Model->name][$field]['s3_bucket'],
+												$setModelTableName.'/'.$key1.'/'.$file['name'],
+											   $this->settings[$Model->name][$field]['s3_acl'],
+											   $this->settings[$Model->name][$field]['s3_meta_headers'],
+											   $this->settings[$Model->name][$field]['s3_request_headers']
+										);
+										@unlink(WWW_ROOT.'tmpImage/'.$file['name']);
+								}
+							}
+						}
+					}
+				}
+			rmdir($dir);
             // Put the object on S3
             //$isUploaded = $aws->putObject(
 			   $isUploaded = $aws->putObjectFile(
                            //$aws->inputResource(fopen($file['tmp_name'], 'rb'), filesize($file['tmp_name'])),
 						   $file['tmp_name'],
                            $this->settings[$Model->name][$field]['s3_bucket'],
-                           $file['name'],
+                           $setModelTableName.'/original/'.$file['name'],
                            $this->settings[$Model->name][$field]['s3_acl'],
                            $this->settings[$Model->name][$field]['s3_meta_headers'],
                            $this->settings[$Model->name][$field]['s3_request_headers']
-                          );
+                );
             // If S3 upload failed then set the model error
             if ($isUploaded == false) {
                 $Model->invalidate($this->settings[$Model->name][$field]['formfield'], 's3_upload_error');
@@ -242,7 +293,7 @@ class UploadBehavior extends ModelBehavior {
         }
         return true;
     }//end __uploadToS3()
-
+	
     /**
      * Method called automatically by model's delete
      *
@@ -263,16 +314,54 @@ class UploadBehavior extends ModelBehavior {
             // Instantiate the class
             $aws = new S3($accessKey, $secretKey);
             // Get model's data for filename of photo
-            $filename = $model->field($model->name . '.' . $field);
+            $filename = $Model->field($Model->name . '.' . $field);
+			$setModelTableName =  $this->getModelTableName($Model);
+			$setUploadFolderInfo =  $this->getUploadFolderInfo($Model);
 
             // If filename is found then delete original photo
-            if (!empty($filename)) {
-                $aws->deleteObject($options['s3_bucket'], $filename);
+            if (!empty($filename)) {				
+				if(!empty($setUploadFolderInfo)){
+					foreach($setUploadFolderInfo as $key=>$val){
+						foreach($val as $key1=>$val1){
+							$aws->deleteObject($options['s3_bucket'], $setModelTableName.'/'.$key1.'/'.$filename);
+						}
+					}
+				}
             }
         }
         // Return true by default
         return true;
     }//end beforeDelete()
+	
+	function getUploadFolderInfo(Model $Model) {
+		$setTmpFolderInfo =array();
+		foreach ($this->settings[$Model->alias] as $field => $options) {
+			if(isset($this->settings[$Model->name][$field]['thumbnailimage']) && !empty($this->settings[$Model->name][$field]['thumbnailimage'])){
+				$tmpArray =array();
+				$tmpArray['thumbnailimage'] = $this->settings[$Model->name][$field]['thumbnailimage'];
+				array_push($setTmpFolderInfo,$tmpArray);
+			}
+			if(isset($this->settings[$Model->name][$field]['120x263']) && !empty($this->settings[$Model->name][$field]['120x263'])){
+				$tmpArray =array();
+				$tmpArray['120x263'] = $this->settings[$Model->name][$field]['120x263'];
+				array_push($setTmpFolderInfo,$tmpArray);
+			}
+			if(isset($this->settings[$Model->name][$field]['300x180']) && !empty($this->settings[$Model->name][$field]['300x180'])){
+				$tmpArray =array();
+				$tmpArray['300x180'] = $this->settings[$Model->name][$field]['300x180'];
+				array_push($setTmpFolderInfo,$tmpArray);
+			}
+			
+				$tmpArray =array();
+				$tmpArray['original'] = 'original';
+				array_push($setTmpFolderInfo,$tmpArray);
+		}
+		return $setTmpFolderInfo;
+	}
+	
+	function getModelTableName(Model $Model) {
+		return $Model->table;
+	}
 	
 	function _arrayMerge($arr, $ins) {
 		if (is_array($arr)) {

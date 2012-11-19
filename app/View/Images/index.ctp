@@ -12,12 +12,13 @@
 	?>
 		<tr>
 			<td>
-				<a href="<?php echo "http://".$bucketName.".s3.amazonaws.com/".$val['Image']['filename']; ?>" target="_blank">
-					<img src="<?php echo "http://".$bucketName.".s3.amazonaws.com/".$val['Image']['filename']; ?>" width="60" height="60" />
-				</a><?php echo $val['Image']['filename']; ?>
+				<b><?php echo $val['Image']['filename']; ?></b>
 			</td>
 		<td>
-			 <a href="<?php echo "http://".$bucketName.".s3.amazonaws.com/".$val['Image']['filename']; ?>" target="_blank">Download</a>
+			<a href="<?php echo $this->Html->url(array('controller'=>'images','action'=>'edit',$val['Image']['id'])) ?>">Edit</a>&nbsp;|&nbsp;
+			<a href="<?php echo $this->Html->url(array('controller'=>'images','action'=>'view',$val['Image']['id'])) ?>">View</a>&nbsp;|&nbsp;			
+			<a href="<?php echo $this->Html->url(array('controller'=>'images','action'=>'delete',$val['Image']['id'])) ?>">Delete</a>&nbsp;|&nbsp;
+			<a href="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/original/".$val['Image']['filename']; ?>" target="_blank">Download</a>
 		</td>
 	</tr>
 <?php 
@@ -25,4 +26,4 @@
 	}
 ?>
 </table>
- <a href="<?php echo  $this->Html->url(array('controller'=>'images','action'=>'add'))?>">Upload File</a>
+<a href="<?php echo  $this->Html->url(array('controller'=>'images','action'=>'add'))?>">Upload File</a>

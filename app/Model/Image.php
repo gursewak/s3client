@@ -10,7 +10,9 @@ class Image extends AppModel {
 												's3_acl'             => 'public-read',
 											 	//'formfield'=>'filename',
 												'allowed_ext'        => array('jpg', 'jpeg', 'png', 'gif'),
-												'thumbsizes' => array('width'=>200, 'height'=>200)
+												'thumbnailimage' => array('width'=>60, 'height'=>45),
+												'120x263' => array('width'=>120, 'height'=>263),
+												'300x180' => array('width'=>300, 'height'=>180)
 											 )
 										));	
 	 
