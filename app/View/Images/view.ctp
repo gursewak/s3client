@@ -9,16 +9,21 @@
 		
 		<tr>
 			<td>
-					<img src="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/thumbnailimage/".$image['Image']['filename']; ?>" />
-				<br />
-				<br />
-				<img src="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/120x263/".$image['Image']['filename']; ?>" />
-				<br />
-				<br />
-				<img src="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/300x180/".$image['Image']['filename']; ?>" />
-				<br />
-				<br />
-				<img src="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/original/".$image['Image']['filename']; ?>" />			
+				<?php 
+					if(isset($setUploadFolderInfo) && !empty($setUploadFolderInfo)){
+						foreach($setUploadFolderInfo as $key=>$val){
+							foreach($val as $key1=>$val1){
+								preg_match("/(.+)\.(.*?)\Z/", $image['Image']['filename'], $matches);
+				?>
+								<img src="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/".$image['Image']['id']."/".$key1.".".$matches[2]; ?>" />
+								<br />
+								<br />	
+				<?php }
+						}
+				?>
+				<?php 
+					}
+				?>
 				
 			</td>
 	</tr>

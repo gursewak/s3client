@@ -1,4 +1,4 @@
-<h1>Files List</h1>
+<h1>Images List</h1>
 
 <table cellpadding="0" cellspacing="0">
 	<tr>
@@ -9,6 +9,7 @@
 		if(!empty($bucketData)){
 			$i = 0;
 			foreach ($bucketData as $key=>$val){
+				preg_match("/(.+)\.(.*?)\Z/", $val['Image']['filename'], $matches);
 	?>
 		<tr>
 			<td>
@@ -18,7 +19,7 @@
 			<a href="<?php echo $this->Html->url(array('controller'=>'images','action'=>'edit',$val['Image']['id'])) ?>">Edit</a>&nbsp;|&nbsp;
 			<a href="<?php echo $this->Html->url(array('controller'=>'images','action'=>'view',$val['Image']['id'])) ?>">View</a>&nbsp;|&nbsp;			
 			<a href="<?php echo $this->Html->url(array('controller'=>'images','action'=>'delete',$val['Image']['id'])) ?>">Delete</a>&nbsp;|&nbsp;
-			<a href="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/original/".$val['Image']['filename']; ?>" target="_blank">Download</a>
+			<a href="<?php echo "http://".$bucketName.".s3.amazonaws.com/images/".$val['Image']['id']."/original.".$matches[2]; ?>" target="_blank">Download</a>
 		</td>
 	</tr>
 <?php 
@@ -26,4 +27,4 @@
 	}
 ?>
 </table>
-<a href="<?php echo  $this->Html->url(array('controller'=>'images','action'=>'add'))?>">Upload File</a>
+<a href="<?php echo  $this->Html->url(array('controller'=>'images','action'=>'add'))?>">Upload Image</a>

@@ -192,10 +192,8 @@ class UploadBehavior extends ModelBehavior {
                                     'old_filename' => $oldFilename,
                                     );
         }
-        
+            
         return $this->__uploadToS3($Model);
-		/*$Model->data[$Model->name][$field] = $filename;  
-		return true;*/
     }//end beforeSave()
         
     /**
@@ -209,7 +207,7 @@ class UploadBehavior extends ModelBehavior {
         App::import('Vendor', 'S3', array('file' => 'S3.php'));
 
         // Run a loop on all files to be uploaded to S3
-        foreach ($this->files as $field => $file) {			
+        foreach ($this->files as $field => $file) {
             $accessKey = $this->__accessKey;
             $secretKey = $this->__secretKey;
             // If we have S3 credentials for this field/file
@@ -224,7 +222,6 @@ class UploadBehavior extends ModelBehavior {
 			//$Model->table			
 			$setModelTableName =  $this->getModelTableName($Model);
 			$setUploadFolderInfo =  $this->getUploadFolderInfo($Model);
-			$setRecordIdNumber  = $this->getRecordId($Model);
 			
             // If there is an old file to be removed
             if (!empty($file['old_filename'])) {
@@ -232,8 +229,7 @@ class UploadBehavior extends ModelBehavior {
 					if(!empty($setUploadFolderInfo)){
 						foreach($setUploadFolderInfo as $key=>$val){
 							foreach($val as $key1=>$val1){
-							preg_match("/(.+)\.(.*?)\Z/", $file['old_filename'], $matches);
-								$aws->deleteObject($this->settings[$Model->name][$field]['storage']['options']['s3_bucket'], $setModelTableName.'/'.$setRecordIdNumber.'/'.$key1.'.'.$matches[2]);
+								$aws->deleteObject($this->settings[$Model->name][$field]['storage']['options']['s3_bucket'], $setModelTableName.'/'.$key1.'/'.$file['old_filename']);
 							}
 						}
 					}
@@ -249,13 +245,13 @@ class UploadBehavior extends ModelBehavior {
 				chmod($dir, 0777);
 			}
 			chmod($dir, 0777);
-			preg_match("/(.+)\.(.*?)\Z/", $file['name'], $matches);
+			
 			App::import('Vendor','wide-image', array('file' => 'wideimage/lib/WideImage.php'));
 				if(!empty($setUploadFolderInfo)){
 					foreach($setUploadFolderInfo as $key=>$val){
 						foreach($val as $key1=>$val1){
 							if($key1!='original'){
-								if(!empty($val1) && !empty($val1['width']) && !empty($val1['height'])){									
+								if(!empty($val1) && !empty($val1['width']) && !empty($val1['height'])){
 									$width = $val1['width'];
 									$height = $val1['height'];
 									WideImage::load($file['tmp_name'])->resize($width, $height)->saveToFile('tmpImage/'.$file['name']);
@@ -263,7 +259,7 @@ class UploadBehavior extends ModelBehavior {
 										$isUploaded = $aws->putObjectFile(
 											  WWW_ROOT.'tmpImage/'.$file['name'],
 											   $this->settings[$Model->name][$field]['storage']['options']['s3_bucket'],
-												$setModelTableName.'/'.$setRecordIdNumber.'/'.$key1.'.'.$matches[2],
+												$setModelTableName.'/'.$key1.'/'.$file['name'],
 											   $this->settings[$Model->name][$field]['storage']['options']['s3_acl'],
 											   $this->settings[$Model->name][$field]['storage']['options']['s3_meta_headers'],
 											   $this->settings[$Model->name][$field]['storage']['options']['s3_request_headers']
@@ -281,8 +277,7 @@ class UploadBehavior extends ModelBehavior {
                            //$aws->inputResource(fopen($file['tmp_name'], 'rb'), filesize($file['tmp_name'])),
 						   $file['tmp_name'],
                            $this->settings[$Model->name][$field]['storage']['options']['s3_bucket'],
-						   //$setModelTableName.'/'.$setRecordIdNumber.'/original/'.$file['name'],
-						   $setModelTableName.'/'.$setRecordIdNumber.'/'.'original.'.$matches[2],
+                           $setModelTableName.'/original/'.$file['name'],
                            $this->settings[$Model->name][$field]['storage']['options']['s3_acl'],
                            $this->settings[$Model->name][$field]['storage']['options']['s3_meta_headers'],
                            $this->settings[$Model->name][$field]['storage']['options']['s3_request_headers']
@@ -293,7 +288,6 @@ class UploadBehavior extends ModelBehavior {
                 return false;
             }
             // Set the field values to be saved in table
-			 $Model->data[$Model->name]['id'] = $this->getRecordId($Model);
             $Model->data[$Model->name][$field] = $file['name'];
         }
         return true;
@@ -322,15 +316,13 @@ class UploadBehavior extends ModelBehavior {
             $filename = $Model->field($Model->name . '.' . $field);
 			$setModelTableName =  $this->getModelTableName($Model);
 			$setUploadFolderInfo =  $this->getUploadFolderInfo($Model);
-			$setRecordIdNumber  = $this->getRecordId($Model);
 
             // If filename is found then delete original photo
             if (!empty($filename)) {				
 				if(!empty($setUploadFolderInfo)){
 					foreach($setUploadFolderInfo as $key=>$val){
 						foreach($val as $key1=>$val1){
-							preg_match("/(.+)\.(.*?)\Z/", $filename, $matches);
-							$aws->deleteObject($options['storage']['options']['s3_bucket'], $setModelTableName.'/'.$setRecordIdNumber.'/'.$key1.'.'.$matches[2]);
+							$aws->deleteObject($options['storage']['options']['s3_bucket'], $setModelTableName.'/'.$key1.'/'.$filename);
 						}
 					}
 				}
@@ -382,19 +374,4 @@ class UploadBehavior extends ModelBehavior {
 		return $arr;
 	}
     
-	function getRecordId(Model $Model) {
-			$getTempId = 0;
-			if(empty($Model->id)){
-				$getListData = $Model->find('all',array('fields'=>array('id'),'order' => 'id DESC','recursive' => -1));
-					if(!empty($getListData)){
-						$getTempId = $getListData[0][$Model->name]['id'];
-						$getTempId = $getTempId+1;
-					}else{
-						$getTempId = 1;
-					}
-			}else{
-				$getTempId = $Model->id;
-			}
-			return $getTempId;
-	}
 }//end class

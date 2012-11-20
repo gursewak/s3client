@@ -11,11 +11,13 @@
 		public function add() {
 			if(!empty($this->data)) {	//Check Data not empty if 1
 			
-				 if(!empty($this->data['Image']['filename']['name']) && !empty($this->data['Image']['filename']['tmp_name'])){  //check file has value if 2
+				// if(!empty($this->data['Image']['filename']['name']) && !empty($this->data['Image']['filename']['tmp_name'])){  //check file has value if 2
 				 		//$this->Image->setS3Credentials(Configure::read('awsAccessKey'), Configure::read('awsSecretKey')); 
 						$this->Image->save($this->data);
 						$this->redirect(array('action'=>'index'));
-				 } //end of if 2
+				// }else{
+				 	//$this->Session->setFlash(__('please upload image'));
+				// } //end of if 2
 			}  //end of if 1
 		}
 		
@@ -29,7 +31,9 @@
 				 if(!empty($this->data['Image']['filename']['name']) && !empty($this->data['Image']['filename']['tmp_name'])){
 						$this->Image->save($this->data);
 						$this->redirect(array('action'=>'index'));
-				 }
+				 }else{
+				 	$this->Session->setFlash(__('please upload image'));
+				 } 
 			}if (empty($this->request->data)) {
 				$this->request->data = $this->Image->read(null, $id);
 			}
@@ -42,6 +46,7 @@
 			}
 			$this->set('image', $this->Image->read(null,$id));
 			$this->set('bucketName', Configure::read('awsBucketName'));
+			$this->set('setUploadFolderInfo', $this->Image->getUploadFolderInfo());
 		}
 		
 		public function delete($id=null){
